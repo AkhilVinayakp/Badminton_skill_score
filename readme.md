@@ -1,5 +1,7 @@
 Install python
-Python 3.12.6
+---
+    Python 3.12.6
+
 Create virtual env <\br>
 ---
     python -m venv venv
