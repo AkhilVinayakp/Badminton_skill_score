@@ -1,0 +1,9 @@
+opencv-python
+PyQt5
+numpy
+flask
+flask-socketio
+python-socketio
+websocket-client
+streamlit
+requests
