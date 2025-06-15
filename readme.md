@@ -16,8 +16,9 @@ Run the following for setup
 
 start each component
 ---
-python flask_server.py
 
-python camera_app.py
+    python flask_server.py
 
-python client_app.py
+    python camera_app.py
+
+    python client_app.py
