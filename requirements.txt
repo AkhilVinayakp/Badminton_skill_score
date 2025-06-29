@@ -7,3 +7,9 @@ python-socketio
 websocket-client
 streamlit
 requests
+pandas>=1.5.0
+SQLAlchemy>=1.4.0
+psycopg2-binary>=2.9.0
+scikit-learn>=1.1.0
+mlflow>=2.0.0
+prefect>=2.0.0

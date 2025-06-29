@@ -2,9 +2,13 @@ import sys
 import socketio
 import cv2
 import numpy as np
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QSizePolicy, QLineEdit, QComboBox, QMessageBox
 from PyQt5.QtCore import Qt, QTimer, QSize
 from PyQt5.QtGui import QImage, QPixmap
+import requests
+import os
+import random
+from datetime import datetime
 
 class VideoLabel(QLabel):
     def __init__(self, parent=None):
@@ -95,6 +99,37 @@ class ClientApp(QMainWindow):
         self.video_label = VideoLabel()
         layout.addWidget(self.video_label)
 
+        # Custom feature input fields
+        input_layout = QHBoxLayout()
+        self.shot_type_box = QComboBox()
+        self.shot_type_box.addItems(["smash", "drop", "slice", "clear", "back_hand", "cross_court"])
+        input_layout.addWidget(QLabel("Shot Type:"))
+        input_layout.addWidget(self.shot_type_box)
+
+        self.landing_x_input = QLineEdit()
+        self.landing_x_input.setPlaceholderText("Landing X (e.g. 7.5)")
+        input_layout.addWidget(QLabel("Landing X:"))
+        input_layout.addWidget(self.landing_x_input)
+
+        self.landing_y_input = QLineEdit()
+        self.landing_y_input.setPlaceholderText("Landing Y (e.g. 3.0)")
+        input_layout.addWidget(QLabel("Landing Y:"))
+        input_layout.addWidget(self.landing_y_input)
+
+        self.speed_input = QLineEdit()
+        self.speed_input.setPlaceholderText("Shuttle Speed (km/h)")
+        input_layout.addWidget(QLabel("Speed (km/h):"))
+        input_layout.addWidget(self.speed_input)
+
+        self.predict_button = QPushButton("Predict Score")
+        self.predict_button.clicked.connect(self.predict_score)
+        input_layout.addWidget(self.predict_button)
+
+        self.score_result_label = QLabel("")
+        input_layout.addWidget(self.score_result_label)
+
+        layout.addLayout(input_layout)
+
         # Buttons
         button_layout = QHBoxLayout()
         self.play_button = QPushButton("Play")
@@ -109,10 +144,6 @@ class ClientApp(QMainWindow):
         self.analyze_button.clicked.connect(self.analyze_video)
         button_layout.addWidget(self.analyze_button)
 
-        self.score_button = QPushButton("Get Score")
-        self.score_button.clicked.connect(self.get_score)
-        button_layout.addWidget(self.score_button)
-
         self.map_field_button = QPushButton("MAP FIELD")
         self.map_field_button.clicked.connect(self.toggle_court_overlay)
         button_layout.addWidget(self.map_field_button)
@@ -120,7 +151,7 @@ class ClientApp(QMainWindow):
         layout.addLayout(button_layout)
 
         self.sio = socketio.Client()
-        self.sio.connect('http://localhost:5000')
+        self.sio.connect('http://localhost:9000')
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
@@ -146,9 +177,6 @@ class ClientApp(QMainWindow):
     def analyze_video(self):
         self.is_tracking = not self.is_tracking
         print("Hand tracking:", "Enabled" if self.is_tracking else "Disabled")
-
-    def get_score(self):
-        print("Score: 100 (Dummy score)")
 
     def detect_hand(self, frame):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -198,6 +226,64 @@ class ClientApp(QMainWindow):
                     q_image = QImage(frame.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
                     pixmap = QPixmap.fromImage(q_image)
                     self.video_label.setPixmap(pixmap)
+
+    def predict_score(self):
+        shot_type = self.shot_type_box.currentText()
+        try:
+            landing_x = float(self.landing_x_input.text())
+            landing_y = float(self.landing_y_input.text())
+            speed = float(self.speed_input.text())
+        except ValueError:
+            QMessageBox.warning(self, "Input Error", "Please enter valid numeric values for landing positions and speed.")
+            return
+        payload = {
+            "shot_type": shot_type,
+            "landing_position_x": landing_x,
+            "landing_position_y": landing_y,
+            "shuttle_speed_kmh": speed
+        }
+        try:
+            response = requests.post("http://localhost:9290/predict_score", json=payload)
+            if response.status_code == 200:
+                score = response.json().get("predicted_score", None)
+                shot_value = self.get_shot_value(score)
+                self.score_result_label.setText(f"Predicted Score: {score:.2f} ({shot_value})")
+                # Prepare data for save_shot
+                shot_data = {
+                    "user_id": random.randint(1, 10),
+                    "user_name": f"User{random.randint(1, 10)}",
+                    "user_skill_level": random.choice(["beginner", "intermediate", "advanced", "expert"]),
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "shot_type": shot_type,
+                    "landing_position_x": landing_x,
+                    "landing_position_y": landing_y,
+                    "shuttle_speed_kmh": speed,
+                    "score": score,
+                    "score_type": shot_value
+                }
+                try:
+                    save_response = requests.post("http://localhost:9290/save_shot", json=shot_data)
+                    if save_response.status_code == 200:
+                        print("Shot data saved successfully.")
+                    else:
+                        print(f"Failed to save shot data: {save_response.text}")
+                except Exception as e:
+                    print(f"Error saving shot data: {e}")
+            else:
+                self.score_result_label.setText("API Error")
+        except Exception as e:
+            self.score_result_label.setText(f"Error: {e}")
+
+    def get_shot_value(self, score):
+        if score < 30:
+            return 'bad_shot'
+        elif score < 50:
+            return 'average_shot'
+        elif score < 80:
+            return 'good_shot'
+        elif score <= 100:
+            return 'perfect_shot'
+        return 'unknown'
 
     def closeEvent(self, event):
         self.sio.disconnect()
