@@ -1,0 +1,32 @@
+CREATE DATABASE badminton_db;
+
+CREATE TABLE badminton_shots (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER,
+    user_name VARCHAR(100),
+    user_skill_level VARCHAR(20),
+    timestamp TIMESTAMP,
+    shot_type VARCHAR(20),
+    landing_position_x FLOAT,
+    landing_position_y FLOAT,
+    shuttle_speed_kmh FLOAT,
+    score FLOAT,
+    score_type VARCHAR(20)
+);
+
+
+
+
+CREATE TABLE badminton_shots_predicted (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER,
+    user_name VARCHAR(100),
+    user_skill_level VARCHAR(20),
+    timestamp TIMESTAMP,
+    shot_type VARCHAR(20),
+    landing_position_x FLOAT,
+    landing_position_y FLOAT,
+    shuttle_speed_kmh FLOAT,
+    score FLOAT,
+    score_type VARCHAR(20)
+);
