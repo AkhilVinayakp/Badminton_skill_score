@@ -45,7 +45,7 @@ class CameraApp(QMainWindow):
 
         # Initialize SocketIO client
         self.sio = socketio.Client()
-        self.sio.connect('http://localhost:5000')
+        self.sio.connect('http://localhost:9000')
 
     def toggle_streaming(self):
         if not self.is_streaming:

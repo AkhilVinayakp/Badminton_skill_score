@@ -20,5 +20,25 @@ start each component
     python flask_server.py
 
     python camera_app.py
+    
+     python client_app.py
 
-    python client_app.py
+
+python client_app.py
+
+
+# SCORE API
+
+python .\score_api.py
+
+
+
+# ML PART
+
+# Prefect
+
+prefect
+
+mlflow ui
+
+.\ml_pipeline.py 
